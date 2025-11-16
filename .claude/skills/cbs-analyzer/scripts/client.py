@@ -224,6 +224,35 @@ class CBSClient:
         """Clear all cached data"""
         self.cache.clear()
 
+    def list_datasets(self) -> pd.DataFrame:
+        """
+        List all available CBS datasets from the catalog
+
+        Returns:
+            DataFrame with dataset information (Identifier, Title, Modified, etc.)
+        """
+        import xml.etree.ElementTree as ET
+
+        cache_key = "datasets_catalog"
+        cached = self.cache.get(cache_key)
+
+        if cached is not None:
+            return cached
+
+        # The CBS catalog uses a different endpoint with XML format
+        url = "https://opendata.cbs.nl/ODataCatalog/Tables?$format=json"
+
+        response = self.session.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        datasets = data.get('value', [])
+        df = pd.DataFrame(datasets)
+
+        # Cache for longer (datasets don't change frequently)
+        self.cache.set(cache_key, df, expire=timedelta(days=7).total_seconds())
+        return df
+
     def save_dataset(
         self,
         dataset_id: str,

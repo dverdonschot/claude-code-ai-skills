@@ -17,6 +17,31 @@ Use this skill when:
 
 ## Process
 
+### 0. Find Available Datasets (if needed)
+
+If user doesn't know the dataset ID, search the catalog:
+
+```bash
+# List all available datasets (shows 50 most recent)
+./.claude/skills/cbs-analyzer/scripts/cli.py datasets
+
+# Search for specific topic
+./.claude/skills/cbs-analyzer/scripts/cli.py datasets --search energy
+./.claude/skills/cbs-analyzer/scripts/cli.py datasets --search verzuim
+./.claude/skills/cbs-analyzer/scripts/cli.py datasets --search population
+
+# Show more results
+./.claude/skills/cbs-analyzer/scripts/cli.py datasets --search energy --limit 100
+```
+
+The catalog contains **5,800+ datasets** covering:
+- Energy and environment
+- Labor and economy
+- Demographics and population
+- Housing and living
+- Health and sickness absence
+- Trade and commerce
+
 ### 1. Check if Dataset Exists Locally
 
 ```bash

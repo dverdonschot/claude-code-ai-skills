@@ -261,6 +261,76 @@ def clear_cache():
 
 
 @cli.command()
+@click.option('--search', '-s', help='Search term to filter datasets')
+@click.option('--limit', '-l', default=50, help='Number of datasets to display (default: 50)')
+@click.option('--all', '-a', is_flag=True, help='Show all datasets (ignores limit)')
+def datasets(search: str, limit: int, all: bool):
+    """
+    List all available CBS datasets
+
+    Example: opencbs datasets
+    Example: opencbs datasets --search energy
+    Example: opencbs datasets --all
+    """
+    console.print("[bold blue]Fetching CBS datasets catalog...[/bold blue]")
+
+    client = CBSClient()
+    try:
+        df = client.list_datasets()
+
+        # Filter by search term if provided
+        if search:
+            search_lower = search.lower()
+            mask = (
+                df['Title'].str.lower().str.contains(search_lower, na=False) |
+                df['Identifier'].str.lower().str.contains(search_lower, na=False)
+            )
+            if 'Summary' in df.columns:
+                mask |= df['Summary'].str.lower().str.contains(search_lower, na=False)
+            df = df[mask]
+
+        # Sort by modified date (newest first)
+        if 'Modified' in df.columns:
+            df = df.sort_values('Modified', ascending=False)
+
+        # Apply limit unless --all is specified
+        display_df = df if all else df.head(limit)
+
+        # Create table
+        table = Table(title="CBS Datasets Catalog")
+        table.add_column("Identifier", style="cyan", no_wrap=True)
+        table.add_column("Title", style="green")
+        table.add_column("Period", style="yellow")
+        table.add_column("Modified", style="magenta")
+
+        for _, row in display_df.iterrows():
+            table.add_row(
+                str(row.get('Identifier', 'N/A')),
+                str(row.get('Title', 'N/A'))[:80],  # Truncate long titles
+                str(row.get('Period', 'N/A'))[:20],
+                str(row.get('Modified', 'N/A'))[:10] if pd.notna(row.get('Modified')) else 'N/A'
+            )
+
+        console.print(table)
+
+        # Summary
+        if search:
+            console.print(f"\n[green]Found {len(df)} datasets matching '{search}'[/green]")
+        else:
+            console.print(f"\n[green]Total datasets: {len(df)}[/green]")
+
+        if not all and len(df) > limit:
+            console.print(f"[yellow]Showing {limit} of {len(df)} datasets[/yellow]")
+            console.print(f"[yellow]Use --limit {len(df)} or --all to see all results[/yellow]")
+
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        import traceback
+        console.print(traceback.format_exc())
+        raise click.Abort()
+
+
+@cli.command()
 @click.argument('dataset_id')
 @click.option('--limit', '-l', default=None, type=int, help='Number of rows to fetch (default: all)')
 @click.option('--select', '-s', help='Comma-separated list of columns')
