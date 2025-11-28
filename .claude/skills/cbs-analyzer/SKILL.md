@@ -7,6 +7,8 @@ description: Download and analyze CBS (Dutch Statistics) Open Data datasets by I
 
 Download and analyze CBS Open Data datasets using the opencbs CLI and pandas for data analysis.
 
+> **📝 Featured Article**: Learn how this skill was built in [Building an AI Skill to Analyze Datasets on CBS Open Data](https://dverdonschot.github.io/blog/2025-11-22-ai-skill-opencbs.html)
+
 ## Context
 
 Use this skill when:

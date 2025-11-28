@@ -20,30 +20,6 @@ Maintains structured, concise documentation in the `docs/` folder. This skill:
 
 **When to use**: After making significant code changes, adding features, or refactoring components.
 
-### Honest Feedback (`honest-feedback`)
-**Location**: `.claude/skills/honest-feedback.md`
-
-Provides direct, factual, and objective responses without sycophancy. This skill:
-- Challenges bad ideas with specific technical reasoning
-- Admits uncertainty and asks clarifying questions when needed
-- Points out flaws directly without sugarcoating
-- Prioritizes truth over comfort
-- Identifies incoherent or problematic requirements
-
-**When to use**: When evaluating code quality, reviewing proposals, assessing technical approaches, or when you need brutally honest technical feedback.
-
-### Session Memory (`session-memory`)
-**Location**: `.claude/skills/session-memory.md`
-
-Documents work completed in each session with concise, factual summaries. This skill:
-- Creates individual session files (<50 lines) in `memories/sessions/`
-- References specific files and line numbers changed
-- Tracks decisions with reasoning
-- Updates `memories/memory-status.md` index for quick lookup
-- Uses tags for searchability
-
-**When to use**: At the end of work sessions, after completing significant tasks, or before switching project areas.
-
 ### CBS Dataset Analyzer (`cbs-analyzer`)
 **Location**: `.claude/skills/cbs-analyzer/SKILL.md`
 
@@ -55,6 +31,34 @@ Download and analyze CBS Open Data datasets. This skill:
 - Answers questions about Dutch statistics
 
 **When to use**: When analyzing CBS datasets, exploring trends in Dutch statistics, or querying CBS Open Data by dataset ID.
+
+**📝 Read more**: [Building an AI Skill to Analyze Datasets on CBS Open Data](https://dverdonschot.github.io/blog/2025-11-22-ai-skill-opencbs.html)
+
+### Kubernetes Cluster Metrics (`k8s-metrics`)
+**Location**: `.claude/skills/k8s-metrics/SKILL.md`
+
+Generate comprehensive Kubernetes cluster health and resource usage reports. This skill:
+- Checks cluster connectivity and gathers pod/node status
+- Identifies failed containers, crash loops, and resource issues
+- Analyzes resource distribution across namespaces
+- Generates human-readable summary reports
+- Outputs detailed JSON with specific resource names for AI investigation
+- Provides actionable recommendations
+
+**When to use**: When checking Kubernetes cluster health, investigating pod failures, analyzing resource usage, or needing quick cluster status overview.
+
+### Container Sandboxes (`container-sandboxes`)
+**Location**: `.claude/skills/container-sandboxes/SKILL.md`
+
+Create isolated container environments for safe code execution using Docker or Podman. This skill:
+- Provides local sandboxes without API keys or external services
+- Supports both Docker and Podman with auto-detection
+- Includes Python, Node, and full-stack container templates
+- Executes commands safely in isolated environments
+- Manages files and processes within sandboxes
+- Perfect for testing untrusted code or running experiments locally
+
+**When to use**: When you need to run code in isolation, test packages safely, execute untrusted code, or work in clean environments without affecting the host system.
 
 ## Skill Structure
 
