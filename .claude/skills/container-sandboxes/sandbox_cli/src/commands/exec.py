@@ -21,7 +21,9 @@ console = Console()
 @click.option("--env", "-e", multiple=True, help="Environment variables (KEY=VALUE)")
 @click.option("--timeout", default=60, type=int, help="Command timeout in seconds (0 for unlimited)")
 @click.option("--background", is_flag=True, help="Run in background")
-def exec(sandbox_id, command, cwd, user, root, shell, env, timeout, background):
+@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+@click.option("--echo", is_flag=True, help="Always display full output (stdout/stderr)")
+def exec(sandbox_id, command, cwd, user, root, shell, env, timeout, background, output_json, echo):
     r"""
     Execute a command with full control over execution environment.
 
@@ -71,18 +73,21 @@ def exec(sandbox_id, command, cwd, user, root, shell, env, timeout, background):
         actual_command = command
         if shell:
             actual_command = f'/bin/bash -c "{command}"'
-            console.print(f"[yellow]Executing shell command: {command}[/yellow]")
+            if not output_json:
+                console.print(f"[yellow]Executing shell command: {command}[/yellow]")
         else:
-            console.print(f"[yellow]Executing: {command}[/yellow]")
+            if not output_json:
+                console.print(f"[yellow]Executing: {command}[/yellow]")
 
-        if user:
-            console.print(f"[dim]User: {user}[/dim]")
-        if cwd:
-            console.print(f"[dim]Working directory: {cwd}[/dim]")
-        if envs:
-            console.print(
-                f"[dim]Environment: {', '.join(f'{k}={v}' for k, v in envs.items())}[/dim]"
-            )
+        if not output_json:
+            if user:
+                console.print(f"[dim]User: {user}[/dim]")
+            if cwd:
+                console.print(f"[dim]Working directory: {cwd}[/dim]")
+            if envs:
+                console.print(
+                    f"[dim]Environment: {', '.join(f'{k}={v}' for k, v in envs.items())}[/dim]"
+                )
 
         if background:
             result = cmd_module.run_command_background(
@@ -93,8 +98,16 @@ def exec(sandbox_id, command, cwd, user, root, shell, env, timeout, background):
                 timeout=timeout if timeout > 0 else None,
                 user=user,
             )
-            console.print(f"\n[green]✓ Background command started[/green]")
-            console.print(f"[dim]Process is running in background[/dim]")
+            if output_json:
+                import json
+                print(json.dumps({
+                    "success": True,
+                    "background": True,
+                    "message": "Command started in background"
+                }, indent=2))
+            else:
+                console.print(f"\n[green]✓ Background command started[/green]")
+                console.print(f"[dim]Process is running in background[/dim]")
             return  # Exit early for background commands
         else:
             result = cmd_module.run_command(
@@ -105,16 +118,43 @@ def exec(sandbox_id, command, cwd, user, root, shell, env, timeout, background):
                 timeout=timeout if timeout > 0 else None,
                 user=user,
             )
+
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": result['exit_code'] == 0,
+                "exit_code": result['exit_code'],
+                "stdout": result["stdout"],
+                "stderr": result["stderr"],
+                "command": command,
+                "cwd": cwd,
+                "user": user
+            }, indent=2))
+        else:
             console.print(f"\n[cyan]Exit code: {result['exit_code']}[/cyan]")
 
-        if result["stdout"]:
-            console.print("\n[green]STDOUT:[/green]")
-            console.print(result["stdout"])
+            # With --echo, always show output; without it, show as before
+            if echo or result["stdout"]:
+                if result["stdout"]:
+                    console.print("\n[green]STDOUT:[/green]")
+                    console.print(result["stdout"])
+                elif echo:
+                    console.print("\n[dim]No stdout output[/dim]")
 
-        if result["stderr"]:
-            console.print("\n[red]STDERR:[/red]")
-            console.print(result["stderr"])
+            if echo or result["stderr"]:
+                if result["stderr"]:
+                    console.print("\n[red]STDERR:[/red]")
+                    console.print(result["stderr"])
+                elif echo:
+                    console.print("\n[dim]No stderr output[/dim]")
 
     except Exception as e:
-        console.print(f"[red]✗ Error: {e}[/red]")
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": False,
+                "error": str(e)
+            }))
+        else:
+            console.print(f"[red]✗ Error: {e}[/red]")
         raise click.Abort()

@@ -51,6 +51,19 @@ Local container-based sandboxes for safe code execution. Create isolated environ
 - **Runtime Flexibility**: Supports both Docker and Podman with auto-detection.
 - **Naming**: Each sandbox gets a friendly name (e.g., `csbx-my-project`) and an ID (e.g., `abc123def456`). You can use either in commands!
 
+## Output Visibility Rules
+
+**CRITICAL**: Use these flags to ensure outputs are visible (not hidden in collapsed Bash blocks):
+- `--echo` - Display content/output immediately (files write, exec)
+- `--json` - Structured JSON output for parsing
+
+**Usage:**
+- Writing files: `csbx files write <id> <path> "content" --echo`
+- Executing code: `csbx exec <id> "command" --echo`
+- Reading/listing: `csbx files read/ls <id> <path> --json` (optional)
+
+Always summarize operations in response text after running commands.
+
 ## Commands Reference
 
 ### Lifecycle
@@ -66,13 +79,15 @@ Local container-based sandboxes for safe code execution. Create isolated environ
 
 ### Execution
 - `csbx exec <id> "command"` - Run a command
+- `csbx exec <id> "cmd" --echo` - Run and always show output
+- `csbx exec <id> "cmd" --json` - Run and output JSON
 - `csbx exec <id> "cmd" --background` - Run in background
 - `csbx exec <id> "cmd" --cwd /path` - Set working directory
 
 ### File Operations
-- `csbx files ls <id> /path` - List files
-- `csbx files read <id> /path` - Read file content
-- `csbx files write <id> /path "content"` - Write content to file
+- `csbx files ls <id> /path` - List files (add `--json` for structured output)
+- `csbx files read <id> /path` - Read file content (add `--json` for structured output)
+- `csbx files write <id> /path "content"` - Write content to file (add `--echo` to display)
 - `csbx files upload <id> local remote` - Upload file/dir
 - `csbx files download <id> remote local` - Download file/dir
 
@@ -83,12 +98,15 @@ Local container-based sandboxes for safe code execution. Create isolated environ
 # Create sandbox with a friendly name
 csbx init --template container-sandbox:python --name my-project
 
-# Run python (using the name)
-csbx exec my-project "python -c 'print(\"Hello from containers!\")'"
+# Run python with visible output (using the name)
+csbx exec my-project "python -c 'print(\"Hello from containers!\")'" --echo
+
+# Write and display a Python script
+csbx files write my-project /home/user/app.py "print('Hello World')" --echo
 
 # Or use the ID
 ID=$(csbx init --template container-sandbox:python)
-csbx exec $ID "python -c 'print(\"Hello from containers!\")'"
+csbx exec $ID "python -c 'print(\"Hello from containers!\")'" --echo
 
 # Cleanup (works with either name or ID)
 csbx sandbox kill my-project

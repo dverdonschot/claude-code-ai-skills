@@ -20,61 +20,100 @@ def files():
 @click.argument("sandbox_id")
 @click.argument("path", default="/")
 @click.option("--depth", "-d", default=1, help="Directory depth to traverse")
-def ls(sandbox_id, path, depth):
+@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+def ls(sandbox_id, path, depth, output_json):
     """
     List files in a directory.
 
     Examples:
         csbx files ls abc123 /
         csbx files ls abc123 /home/user
+        csbx files ls abc123 /home/user --json
     """
     try:
-        console.print(f"[yellow]Listing files in {path}...[/yellow]")
+        if not output_json:
+            console.print(f"[yellow]Listing files in {path}...[/yellow]")
 
         file_list = files_module.list_files(sandbox_id, path, depth)
 
-        table = Table(title=f"Files in {path}")
-        table.add_column("Type", style="cyan")
-        table.add_column("Name", style="green")
-        table.add_column("Size", style="yellow", justify="right")
-        table.add_column("Permissions", style="dim")
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": True,
+                "path": path,
+                "files": file_list,
+                "count": len(file_list)
+            }, indent=2))
+        else:
+            table = Table(title=f"Files in {path}")
+            table.add_column("Type", style="cyan")
+            table.add_column("Name", style="green")
+            table.add_column("Size", style="yellow", justify="right")
+            table.add_column("Permissions", style="dim")
 
-        for f in file_list:
-            type_icon = "📁" if f["type"] == "dir" else "📄"
-            table.add_row(
-                type_icon,
-                f["name"],
-                str(f["size"]),
-                f["permissions"],
-            )
+            for f in file_list:
+                type_icon = "📁" if f["type"] == "dir" else "📄"
+                table.add_row(
+                    type_icon,
+                    f["name"],
+                    str(f["size"]),
+                    f["permissions"],
+                )
 
-        console.print(table)
+            console.print(table)
 
     except Exception as e:
-        console.print(f"[red]✗ Error: {e}[/red]")
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": False,
+                "error": str(e)
+            }))
+        else:
+            console.print(f"[red]✗ Error: {e}[/red]")
         raise click.Abort()
 
 
 @files.command()
 @click.argument("sandbox_id")
 @click.argument("path")
-def read(sandbox_id, path):
+@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+def read(sandbox_id, path, output_json):
     """
     Read a file.
 
     Examples:
         csbx files read abc123 /home/user/file.txt
+        csbx files read abc123 /home/user/file.txt --json
     """
     try:
-        console.print(f"[yellow]Reading {path}...[/yellow]")
+        if not output_json:
+            console.print(f"[yellow]Reading {path}...[/yellow]")
 
         content = files_module.read_file(sandbox_id, path)
 
-        console.print(f"\n[cyan]Content of {path}:[/cyan]")
-        console.print(content)
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": True,
+                "path": path,
+                "content": content,
+                "size": len(content),
+                "lines": len(content.splitlines())
+            }, indent=2))
+        else:
+            console.print(f"\n[cyan]Content of {path}:[/cyan]")
+            console.print(content)
 
     except Exception as e:
-        console.print(f"[red]✗ Error: {e}[/red]")
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": False,
+                "error": str(e)
+            }))
+        else:
+            console.print(f"[red]✗ Error: {e}[/red]")
         raise click.Abort()
 
 
@@ -83,13 +122,17 @@ def read(sandbox_id, path):
 @click.argument("path")
 @click.argument("content", required=False)
 @click.option("--stdin", is_flag=True, help="Read content from stdin")
-def write(sandbox_id, path, content, stdin):
+@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+@click.option("--echo", is_flag=True, help="Display content after writing")
+def write(sandbox_id, path, content, stdin, output_json, echo):
     """
     Write content to a file.
 
     Examples:
         csbx files write abc123 /home/user/file.txt "Hello World"
         echo "Hello" | csbx files write abc123 /home/user/file.txt --stdin
+        csbx files write abc123 /home/user/file.txt "code" --echo
+        csbx files write abc123 /home/user/file.txt "code" --json
     """
     try:
         # Read from stdin if flag is set
@@ -101,14 +144,37 @@ def write(sandbox_id, path, content, stdin):
             console.print("[red]✗ Error: Either provide content argument or use --stdin[/red]")
             raise click.Abort()
 
-        console.print(f"[yellow]Writing to {path}...[/yellow]")
+        if not output_json:
+            console.print(f"[yellow]Writing to {path}...[/yellow]")
 
         info = files_module.write_file(sandbox_id, path, content)
 
-        console.print(f"[green]✓ File written: {info['path']}[/green]")
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": True,
+                "path": info['path'],
+                "size": len(content),
+                "content": content if echo else None,
+                "content_preview": content[:100] if len(content) > 100 and not echo else None
+            }, indent=2))
+        else:
+            console.print(f"[green]✓ File written: {info['path']}[/green]")
+            console.print(f"[dim]Size: {len(content)} bytes[/dim]")
+
+            if echo:
+                console.print(f"\n[cyan]Content of {path}:[/cyan]")
+                console.print(content)
 
     except Exception as e:
-        console.print(f"[red]✗ Error: {e}[/red]")
+        if output_json:
+            import json
+            print(json.dumps({
+                "success": False,
+                "error": str(e)
+            }))
+        else:
+            console.print(f"[red]✗ Error: {e}[/red]")
         raise click.Abort()
 
 
