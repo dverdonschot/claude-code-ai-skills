@@ -9,7 +9,7 @@ Skills are specialized prompts that Claude Code can invoke to perform specific t
 ## Available Skills
 
 ### Documentation Management (`docs-manager`)
-**Location**: `.claude/skills/docs-manager.md`
+**Location**: `.claude/skills/docs-manager/SKILL.md`
 
 Maintains structured, concise documentation in the `docs/` folder. This skill:
 - Ensures documentation stays up-to-date after code changes
@@ -62,7 +62,7 @@ Create isolated container environments for safe code execution using Docker or P
 
 ## Skill Structure
 
-Each skill is defined in `.claude/skills/[skill-name].md` with:
+Each skill is defined in `.claude/skills/[skill-name]/SKILL.md` with:
 
 ```markdown
 # [Skill Name]
@@ -97,19 +97,18 @@ Each skill is defined in `.claude/skills/[skill-name].md` with:
 Run the setup script from any project directory:
 
 ```bash
-/var/home/ewt/ai-skills/setup-skills.sh
+/var/home/ewt/claude-code-ai-skills/setup-skills.sh
 ```
 
 Or specify a target:
 
 ```bash
-/var/home/ewt/ai-skills/setup-skills.sh ~/projects/my-app
+/var/home/ewt/claude-code-ai-skills/setup-skills.sh ~/projects/my-app
 ```
 
 This creates:
 - `.claude/skills/` with symlinks to central skills
-- `memories/` directory for session tracking
-- `memory-status.md` index file
+- `.claude/SKILL.md` symlink to skill catalog
 
 See [Setup Guide](docs/guides/setup-project.md) for details.
 
@@ -117,16 +116,17 @@ See [Setup Guide](docs/guides/setup-project.md) for details.
 
 Skills are symlinked, not copied. Updates to skills in this repository automatically reflect in all projects using them.
 
-**Central location**: `/var/home/ewt/ai-skills/.claude/skills/`
+**Central location**: `/var/home/ewt/claude-code-ai-skills/.claude/skills/`
 **Project links**: Each project's `.claude/skills/` contains symlinks
 
 ## Creating New Skills
 
-1. Create a new file in `.claude/skills/[skill-name].md`
-2. Follow the structure above
-3. Update this SKILL.md file to list the new skill
-4. Test the skill in Claude Code
-5. Skills automatically available in all symlinked projects
+1. Create a new directory in `.claude/skills/[skill-name]/`
+2. Add `SKILL.md` file following the structure above
+3. Add any supporting scripts or files to the skill directory
+4. Update this SKILL.md file to list the new skill
+5. Test the skill in Claude Code
+6. Skills automatically available in all symlinked projects
 
 ## Best Practices
 

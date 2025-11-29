@@ -20,7 +20,7 @@ Each skill file contains:
 ### Currently Available
 
 #### docs-manager
-**File**: `.claude/skills/docs-manager.md`
+**Location**: `.claude/skills/docs-manager/`
 
 Maintains documentation in the `docs/` folder.
 
@@ -37,41 +37,56 @@ Maintains documentation in the `docs/` folder.
 - Uses code references (`file:line`)
 - Follows structured organization
 
-#### honest-feedback
-**File**: `.claude/skills/honest-feedback.md`
+#### cbs-analyzer
+**Location**: `.claude/skills/cbs-analyzer/`
 
-Provides direct, factual responses without sycophancy.
-
-**Responsibilities**:
-- Challenge bad ideas with technical reasoning
-- Admit uncertainty when needed
-- Point out flaws directly
-- Ask clarifying questions
-- Correct misconceptions
-
-**Key Features**:
-- No sugarcoating
-- Factual accuracy prioritized
-- Technical reasoning required
-- Distinguishes facts from opinions
-
-#### session-memory
-**File**: `.claude/skills/session-memory.md`
-
-Documents work completed in each session.
+Downloads and analyzes CBS (Dutch Statistics) Open Data datasets.
 
 **Responsibilities**:
-- Create session summaries
-- Track file changes
-- Record decisions
-- Update memory index
-- Tag for searchability
+- Query specific dataset IDs
+- Download and process CBS data
+- Analyze trends in Dutch statistics
+- Generate visualizations and reports
 
 **Key Features**:
-- <50 lines per session
-- File references with line numbers
-- Monthly folder organization
-- memory-status.md index
+- Automatic dataset download
+- Energy, population, and economic analysis
+- Integration with CBS Open Data API
+- Data visualization capabilities
+
+#### k8s-metrics
+**Location**: `.claude/skills/k8s-metrics/`
+
+Generates comprehensive Kubernetes cluster health reports.
+
+**Responsibilities**:
+- Collect pod status and resource usage
+- Identify failed containers
+- Monitor node health
+- Calculate cluster utilization
+
+**Key Features**:
+- CPU and memory metrics by namespace
+- Pod status summaries
+- Node capacity analysis
+- Failed container detection
+
+#### container-sandboxes
+**Location**: `.claude/skills/container-sandboxes/`
+
+Operates local container sandboxes for safe code execution.
+
+**Responsibilities**:
+- Create isolated execution environments
+- Run code safely using Docker/Podman
+- Test packages in isolation
+- Execute commands in containers
+
+**Key Features**:
+- Docker and Podman support
+- No API key required
+- Local execution
+- Complete isolation
 
 ## Documentation System
 

@@ -27,34 +27,43 @@ Welcome to the AI Skills project! This guide will help you start using Claude Co
   - Keeps docs concise and up-to-date
   - Creates helpful visualizations
 
-- **honest-feedback**: Provides direct, factual feedback without sycophancy
-  - Challenges bad ideas with technical reasoning
-  - Admits uncertainty when needed
-  - No sugarcoating
+- **cbs-analyzer**: Download and analyze CBS (Dutch Statistics) Open Data datasets
+  - Query specific dataset IDs
+  - Explore energy/population/economic trends
+  - Analyze Netherlands statistics
 
-- **session-memory**: Documents work done in each session
-  - Creates concise summaries (<50 lines)
-  - Tracks file changes and decisions
-  - Updates searchable index
+- **k8s-metrics**: Generate Kubernetes cluster health reports
+  - Shows pod status and resource distribution
+  - Displays failed containers and node health
+  - Provides cluster utilization metrics
+
+- **container-sandboxes**: Operate local container sandboxes
+  - Run code in isolation using Docker or Podman
+  - Test packages safely
+  - Execute commands in isolated environments
 
 ## Project Structure
 
 ```
-ai-skills/
+claude-code-ai-skills/
 ├── SKILL.md                    # Skill catalog and overview
 ├── .claude/skills/             # Skill definitions
-│   ├── docs-manager.md
-│   ├── honest-feedback.md
-│   └── session-memory.md
+│   ├── cbs-analyzer/
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   ├── container-sandboxes/
+│   │   └── SKILL.md
+│   ├── docs-manager/
+│   │   └── SKILL.md
+│   └── k8s-metrics/
+│       ├── SKILL.md
+│       └── scripts/
 ├── docs/                       # Project documentation
 │   ├── getting-started.md      # This file
 │   ├── architecture/           # System design docs
 │   ├── guides/                 # Feature guides
 │   └── reference/              # API and config reference
-└── memories/                   # Session work logs
-    ├── memory-status.md        # Quick lookup index
-    └── sessions/               # Individual session files
-        └── YYYY-MM/
+└── setup-skills.sh             # Setup script for projects
 ```
 
 ## Next Steps

@@ -22,8 +22,7 @@ The setup script:
 
 1. Creates `.claude/skills/` directory
 2. Symlinks all skills from ai-skills repository
-3. Creates `memories/` directory structure
-4. Initializes `memory-status.md` index file
+3. Links `SKILL.md` catalog to `.claude/` directory
 
 ## Result
 
@@ -32,14 +31,12 @@ After running, your project has:
 ```
 your-project/
 ├── .claude/
+│   ├── SKILL.md -> /var/home/ewt/claude-code-ai-skills/SKILL.md
 │   └── skills/              # Symlinks to central skills
-│       ├── docs-manager.md -> /var/home/ewt/ai-skills/.claude/skills/docs-manager.md
-│       ├── honest-feedback.md -> /var/home/ewt/ai-skills/.claude/skills/honest-feedback.md
-│       └── session-memory.md -> /var/home/ewt/ai-skills/.claude/skills/session-memory.md
-└── memories/                # Project-specific session logs
-    ├── memory-status.md
-    └── sessions/
-        └── YYYY-MM/
+│       ├── cbs-analyzer/
+│       ├── container-sandboxes/
+│       ├── docs-manager/
+│       └── k8s-metrics/
 ```
 
 ## Usage
@@ -48,15 +45,12 @@ In Claude Code, invoke skills:
 
 ```
 Skill: docs-manager
-Skill: honest-feedback
-Skill: session-memory
+Skill: cbs-analyzer
+Skill: k8s-metrics
+Skill: container-sandboxes
 ```
 
-Skills are not yet invokable via the Skill tool (feature may be added in future Claude Code versions). For now, you can:
-
-1. **Copy skill content**: Read the skill file and paste into your prompt
-2. **Reference in instructions**: "Follow the process in `.claude/skills/docs-manager.md`"
-3. **Wait for feature**: Claude Code may add skill support in future updates
+Skills are invoked using Claude Code's Skill tool and will automatically execute their specialized tasks.
 
 ## Updating Skills
 
@@ -82,8 +76,9 @@ Example:
 ```bash
 # After running setup-skills.sh
 cd your-project/.claude/skills
-# Create project-specific skill
-cat > custom-skill.md << 'EOF'
+# Create project-specific skill directory
+mkdir -p custom-skill
+cat > custom-skill/SKILL.md << 'EOF'
 # Custom Skill
 [Your custom skill content]
 EOF
@@ -96,17 +91,17 @@ If you prefer manual setup:
 ```bash
 cd your-project
 mkdir -p .claude/skills
-cd .claude/skills
+cd .claude
+
+# Symlink skill catalog
+ln -s /var/home/ewt/claude-code-ai-skills/SKILL.md .
 
 # Symlink skills
-ln -s /var/home/ewt/ai-skills/.claude/skills/docs-manager.md .
-ln -s /var/home/ewt/ai-skills/.claude/skills/honest-feedback.md .
-ln -s /var/home/ewt/ai-skills/.claude/skills/session-memory.md .
-
-# Setup memories
-cd ../..
-mkdir -p memories/sessions/$(date +%Y-%m)
-touch memories/memory-status.md
+cd skills
+ln -s /var/home/ewt/claude-code-ai-skills/.claude/skills/docs-manager .
+ln -s /var/home/ewt/claude-code-ai-skills/.claude/skills/cbs-analyzer .
+ln -s /var/home/ewt/claude-code-ai-skills/.claude/skills/k8s-metrics .
+ln -s /var/home/ewt/claude-code-ai-skills/.claude/skills/container-sandboxes .
 ```
 
 ## Troubleshooting
