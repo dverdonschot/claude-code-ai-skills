@@ -354,8 +354,8 @@ def export(sandbox_id, path, output, name):
 @click.argument("remote_url")
 @click.option("--branch", "-b", default=None, help="Branch to clone (default: main branch)")
 @click.option("--path", "-p", default="/home/user", help="Path to clone into in sandbox")
-@click.option("--ssh-key", "-k", default=None, help="Path to SSH key (default: ~/.claude/claude_ai_rsa)")
-def git_clone(sandbox_id, remote_url, branch, path, ssh_key):
+@click.option("--github-token", "-t", default=None, help="GitHub token (or set GITHUB_TOKEN env var)")
+def git_clone(sandbox_id, remote_url, branch, path, github_token):
     """
     Clone a git repository into the sandbox.
 
@@ -364,25 +364,25 @@ def git_clone(sandbox_id, remote_url, branch, path, ssh_key):
     - Cloning before making changes and pushing back
     - Working on an existing repository
 
-    Supports both HTTPS and SSH authentication. For SSH, it uses a dedicated
-    AI SSH key from ~/.claude/claude_ai_rsa (recommended for security).
+    Supports HTTPS authentication with GitHub tokens. SSH authentication is
+    disabled for security reasons - use GitHub tokens instead.
 
     Examples:
-        # Clone via HTTPS
+        # Clone via HTTPS with token
+        csbx sandbox git-clone my-project https://github.com/user/repo.git --github-token $GITHUB_TOKEN
+
+        # Or set GITHUB_TOKEN environment variable
+        export GITHUB_TOKEN=ghp_...
         csbx sandbox git-clone my-project https://github.com/user/repo.git
 
-        # Clone via SSH
-        csbx sandbox git-clone my-project git@github.com:user/repo.git
-
         # Clone specific branch
-        csbx sandbox git-clone my-project git@github.com:user/repo.git --branch dev
+        csbx sandbox git-clone my-project https://github.com/user/repo.git --branch dev
 
         # Clone to specific path
-        csbx sandbox git-clone my-project git@github.com:user/repo.git --path /home/user/myapp
+        csbx sandbox git-clone my-project https://github.com/user/repo.git --path /home/user/myapp
     """
     import os
     from ..modules import commands as cmd_module
-    from ..modules import files as files_module
 
     try:
         console.print(f"[yellow]Cloning repository into sandbox...[/yellow]")
@@ -390,52 +390,45 @@ def git_clone(sandbox_id, remote_url, branch, path, ssh_key):
         if branch:
             console.print(f"[dim]Branch: {branch}[/dim]")
 
-        # Determine if using SSH
-        using_ssh = remote_url.startswith("git@") or remote_url.startswith("ssh://")
+        # SECURITY: Block SSH authentication - it would require copying host SSH keys
+        if remote_url.startswith("git@") or remote_url.startswith("ssh://"):
+            console.print(f"[red]✗ SSH authentication is disabled for security reasons[/red]")
+            console.print(f"\n[yellow]💡 Use HTTPS with a GitHub token instead:[/yellow]")
+            console.print(f"[dim]1. Create a GitHub token at: https://github.com/settings/tokens[/dim]")
+            console.print(f"[dim]2. Set GITHUB_TOKEN environment variable: export GITHUB_TOKEN=ghp_...[/dim]")
+            console.print(f"[dim]3. Use HTTPS URL: https://github.com/user/repo.git[/dim]")
+            raise click.Abort()
 
-        # Setup SSH key if needed
-        if using_ssh:
-            if ssh_key is None:
-                # Use AI-specific SSH key
-                ssh_key = os.path.expanduser("~/.claude/claude_ai_rsa")
+        # Get GitHub token from argument or environment
+        if github_token is None:
+            github_token = os.environ.get("GITHUB_TOKEN")
 
-            if not os.path.exists(ssh_key):
-                console.print(f"[red]✗ SSH key not found: {ssh_key}[/red]")
-                console.print(f"\n[yellow]💡 To set up an AI-specific SSH key:[/yellow]")
-                console.print(f"[dim]1. mkdir -p ~/.claude[/dim]")
-                console.print(f"[dim]2. ssh-keygen -t rsa -b 4096 -f ~/.claude/claude_ai_rsa -C 'claude-ai@local'[/dim]")
-                console.print(f"[dim]3. Add ~/.claude/claude_ai_rsa.pub to your GitHub/GitLab SSH keys[/dim]")
-                raise click.Abort()
-
-            console.print(f"[yellow]Setting up SSH key in sandbox...[/yellow]")
-
-            # Create .ssh directory in sandbox
-            cmd_module.run_command(sandbox_id, ["/bin/sh", "-c", "mkdir -p ~/.ssh && chmod 700 ~/.ssh"], timeout=10)
-
-            # Copy SSH key
-            with open(ssh_key, 'r') as f:
-                key_content = f.read()
-
-            files_module.write_file(sandbox_id, "~/.ssh/id_rsa", key_content.encode())
-            cmd_module.run_command(sandbox_id, ["/bin/sh", "-c", "chmod 600 ~/.ssh/id_rsa"], timeout=10)
-
-            # Copy public key if it exists
-            pub_key = f"{ssh_key}.pub"
-            if os.path.exists(pub_key):
-                with open(pub_key, 'r') as f:
-                    pub_content = f.read()
-                files_module.write_file(sandbox_id, "~/.ssh/id_rsa.pub", pub_content.encode())
-
-            # Setup SSH config to avoid host key checking (for automation)
-            ssh_config = "Host *\n    StrictHostKeyChecking no\n    UserKnownHostsFile=/dev/null\n"
-            files_module.write_file(sandbox_id, "~/.ssh/config", ssh_config.encode())
-            cmd_module.run_command(sandbox_id, ["/bin/sh", "-c", "chmod 600 ~/.ssh/config"], timeout=10)
+        # Check if we need a token for private repos
+        if github_token is None and "github.com" in remote_url:
+            console.print(f"[yellow]⚠ No GitHub token found[/yellow]")
+            console.print(f"\n[cyan]For private repositories, you need a GitHub token:[/cyan]")
+            console.print(f"\n[green]Quick setup with gh CLI:[/green]")
+            console.print(f"[dim]gh auth token[/dim]  # Copy this token")
+            console.print(f"[dim]export GITHUB_TOKEN=$(gh auth token)[/dim]  # Or use this to set it directly")
+            console.print(f"\n[green]Or create token manually:[/green]")
+            console.print(f"[dim]1. Visit: https://github.com/settings/tokens/new[/dim]")
+            console.print(f"[dim]2. Select 'repo' scope[/dim]")
+            console.print(f"[dim]3. Generate token and copy it[/dim]")
+            console.print(f"[dim]4. export GITHUB_TOKEN=ghp_your_token_here[/dim]")
+            console.print(f"\n[yellow]Continuing without token (will only work for public repos)...[/yellow]\n")
 
         # Clone the repository
         console.print("[yellow]Cloning repository...[/yellow]")
 
         branch_flag = f"-b {branch}" if branch else ""
-        clone_cmd = f"git clone {branch_flag} {remote_url}"
+
+        # If we have a token, inject it into the URL
+        if github_token and "github.com" in remote_url:
+            # Convert https://github.com/user/repo.git to https://token@github.com/user/repo.git
+            auth_url = remote_url.replace("https://", f"https://{github_token}@")
+            clone_cmd = f"git clone {branch_flag} {auth_url}"
+        else:
+            clone_cmd = f"git clone {branch_flag} {remote_url}"
 
         result = cmd_module.run_command(
             sandbox_id,
@@ -466,10 +459,10 @@ def git_clone(sandbox_id, remote_url, branch, path, ssh_key):
 @click.option("--branch", "-b", default="main", help="Branch name (default: main)")
 @click.option("--path", "-p", default="/home/user", help="Path to git repository in sandbox")
 @click.option("--message", "-m", default=None, help="Commit message (default: auto-generated)")
-@click.option("--ssh-key", "-k", default=None, help="Path to SSH key (default: ~/.claude/claude_ai_rsa)")
+@click.option("--github-token", "-t", default=None, help="GitHub token (or set GITHUB_TOKEN env var)")
 @click.option("--force", "-f", is_flag=True, help="Force push")
 @click.option("--no-clone", is_flag=True, help="Skip clone-first (create new repo instead)")
-def git_push(sandbox_id, remote_url, branch, path, message, ssh_key, force, no_clone):
+def git_push(sandbox_id, remote_url, branch, path, message, github_token, force, no_clone):
     """
     Push sandbox code to a git remote repository.
 
@@ -487,32 +480,58 @@ def git_push(sandbox_id, remote_url, branch, path, message, ssh_key, force, no_c
     - Pushing changes to a specific branch isolated from others
     - Continuing development on an existing project
 
-    Supports both HTTPS and SSH authentication. For SSH, it uses a dedicated
-    AI SSH key from ~/.claude/claude_ai_rsa (recommended for security).
+    Supports HTTPS authentication with GitHub tokens. SSH authentication is
+    disabled for security reasons - use GitHub tokens instead.
 
     Examples:
         # Auto clone-first for GitHub repos (most common use case)
-        csbx sandbox git-push abc123 https://github.com/user/repo.git
+        csbx sandbox git-push abc123 https://github.com/user/repo.git --github-token $GITHUB_TOKEN
 
         # Auto clone-first with custom branch
-        csbx sandbox git-push abc123 git@github.com:user/repo.git --branch dev
+        csbx sandbox git-push abc123 https://github.com/user/repo.git --branch dev
 
         # Create NEW repo (skip cloning)
         csbx sandbox git-push abc123 https://github.com/user/new-repo.git --no-clone
 
         # Clone-first with custom message
-        csbx sandbox git-push abc123 git@github.com:user/repo.git -m "Add new feature"
+        csbx sandbox git-push abc123 https://github.com/user/repo.git -m "Add new feature"
 
         # Force push (use with caution)
-        csbx sandbox git-push abc123 git@github.com:user/repo.git --force
+        csbx sandbox git-push abc123 https://github.com/user/repo.git --force
     """
     import os
     import re
     from datetime import datetime
     from ..modules import commands as cmd_module
-    from ..modules import files as files_module
 
     try:
+        # SECURITY: Block SSH authentication - it would require copying host SSH keys
+        if remote_url.startswith("git@") or remote_url.startswith("ssh://"):
+            console.print(f"[red]✗ SSH authentication is disabled for security reasons[/red]")
+            console.print(f"\n[yellow]💡 Use HTTPS with a GitHub token instead:[/yellow]")
+            console.print(f"[dim]1. Create a GitHub token at: https://github.com/settings/tokens[/dim]")
+            console.print(f"[dim]2. Set GITHUB_TOKEN environment variable: export GITHUB_TOKEN=ghp_...[/dim]")
+            console.print(f"[dim]3. Use HTTPS URL: https://github.com/user/repo.git[/dim]")
+            raise click.Abort()
+
+        # Get GitHub token from argument or environment
+        if github_token is None:
+            github_token = os.environ.get("GITHUB_TOKEN")
+
+        # Check if we need a token for pushing
+        if github_token is None and "github.com" in remote_url:
+            console.print(f"[red]✗ No GitHub token found[/red]")
+            console.print(f"\n[cyan]Pushing to GitHub requires authentication:[/cyan]")
+            console.print(f"\n[green]Quick setup with gh CLI:[/green]")
+            console.print(f"[dim]export GITHUB_TOKEN=$(gh auth token)[/dim]")
+            console.print(f"\n[green]Or create token manually:[/green]")
+            console.print(f"[dim]1. Visit: https://github.com/settings/tokens/new[/dim]")
+            console.print(f"[dim]2. Select 'repo' scope[/dim]")
+            console.print(f"[dim]3. Generate token and copy it[/dim]")
+            console.print(f"[dim]4. export GITHUB_TOKEN=ghp_your_token_here[/dim]")
+            console.print(f"[dim]5. Re-run this command[/dim]")
+            raise click.Abort()
+
         # Auto-detect if this is a GitHub/GitLab/Bitbucket URL
         # These services host existing repos, so default to clone-first
         git_hosting_patterns = [
@@ -539,59 +558,24 @@ def git_push(sandbox_id, remote_url, branch, path, message, ssh_key, force, no_c
             else:
                 console.print(f"[dim]Mode: New repository[/dim]")
 
-        # Determine if using SSH
-        using_ssh = remote_url.startswith("git@") or remote_url.startswith("ssh://")
-
-        # Setup SSH key if needed
-        if using_ssh:
-            if ssh_key is None:
-                # Use AI-specific SSH key
-                ssh_key = os.path.expanduser("~/.claude/claude_ai_rsa")
-
-            if not os.path.exists(ssh_key):
-                console.print(f"[red]✗ SSH key not found: {ssh_key}[/red]")
-                console.print(f"\n[yellow]💡 To set up an AI-specific SSH key:[/yellow]")
-                console.print(f"[dim]1. mkdir -p ~/.claude[/dim]")
-                console.print(f"[dim]2. ssh-keygen -t rsa -b 4096 -f ~/.claude/claude_ai_rsa -C 'claude-ai@local'[/dim]")
-                console.print(f"[dim]3. Add ~/.claude/claude_ai_rsa.pub to your GitHub/GitLab SSH keys[/dim]")
-                raise click.Abort()
-
-            console.print(f"[yellow]Setting up SSH key in sandbox...[/yellow]")
-
-            # Create .ssh directory in sandbox
-            cmd_module.run_command(sandbox_id, ["/bin/sh", "-c", "mkdir -p ~/.ssh && chmod 700 ~/.ssh"], timeout=10)
-
-            # Copy SSH key
-            with open(ssh_key, 'r') as f:
-                key_content = f.read()
-
-            files_module.write_file(sandbox_id, "~/.ssh/id_rsa", key_content.encode())
-            cmd_module.run_command(sandbox_id, ["/bin/sh", "-c", "chmod 600 ~/.ssh/id_rsa"], timeout=10)
-
-            # Copy public key if it exists
-            pub_key = f"{ssh_key}.pub"
-            if os.path.exists(pub_key):
-                with open(pub_key, 'r') as f:
-                    pub_content = f.read()
-                files_module.write_file(sandbox_id, "~/.ssh/id_rsa.pub", pub_content.encode())
-
-            # Setup SSH config to avoid host key checking (for automation)
-            ssh_config = "Host *\n    StrictHostKeyChecking no\n    UserKnownHostsFile=/dev/null\n"
-            files_module.write_file(sandbox_id, "~/.ssh/config", ssh_config.encode())
-            cmd_module.run_command(sandbox_id, ["/bin/sh", "-c", "chmod 600 ~/.ssh/config"], timeout=10)
-
         # Clone-first workflow
         if clone_first:
             console.print("[yellow]Cloning repository...[/yellow]")
 
             # Extract repo name from URL for directory name
-            import re
             repo_match = re.search(r'/([^/]+?)(?:\.git)?$', remote_url)
             repo_name = repo_match.group(1) if repo_match else "repo"
 
             # Clone into a subdirectory
             branch_flag = f"-b {branch}" if branch else ""
-            clone_cmd = f"git clone {branch_flag} {remote_url} {repo_name}"
+
+            # If we have a token, inject it into the URL
+            if github_token and "github.com" in remote_url:
+                # Convert https://github.com/user/repo.git to https://token@github.com/user/repo.git
+                auth_url = remote_url.replace("https://", f"https://{github_token}@")
+                clone_cmd = f"git clone {branch_flag} {auth_url} {repo_name}"
+            else:
+                clone_cmd = f"git clone {branch_flag} {remote_url} {repo_name}"
 
             result = cmd_module.run_command(
                 sandbox_id,
@@ -663,18 +647,36 @@ def git_push(sandbox_id, remote_url, branch, path, message, ssh_key, force, no_c
                 timeout=30
             )
 
-            result = cmd_module.run_command(
-                sandbox_id,
-                ["/bin/sh", "-c", f"cd {path} && git remote add origin {remote_url}"],
-                timeout=30
-            )
+            # Add remote with token if available
+            if github_token and "github.com" in remote_url:
+                auth_url = remote_url.replace("https://", f"https://{github_token}@")
+                result = cmd_module.run_command(
+                    sandbox_id,
+                    ["/bin/sh", "-c", f"cd {path} && git remote add origin {auth_url}"],
+                    timeout=30
+                )
+            else:
+                result = cmd_module.run_command(
+                    sandbox_id,
+                    ["/bin/sh", "-c", f"cd {path} && git remote add origin {remote_url}"],
+                    timeout=30
+                )
 
             if result["exit_code"] != 0:
                 raise Exception(f"Failed to add remote: {result.get('stderr', 'Unknown error')}")
 
-        # Push to remote
+        # Push to remote (use authenticated URL if we have a token)
         force_flag = "-f" if force else ""
         console.print(f"[yellow]Pushing to {remote_url}...[/yellow]")
+
+        # For clone-first workflow, we need to update the remote URL to include token
+        if clone_first and github_token and "github.com" in remote_url:
+            auth_url = remote_url.replace("https://", f"https://{github_token}@")
+            cmd_module.run_command(
+                sandbox_id,
+                ["/bin/sh", "-c", f"cd {path} && git remote set-url origin {auth_url}"],
+                timeout=30
+            )
 
         result = cmd_module.run_command(
             sandbox_id,

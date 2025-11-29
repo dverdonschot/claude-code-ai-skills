@@ -8,6 +8,10 @@ description: Operate local container sandboxes using Docker or Podman. Use when 
 ## Overview
 Local container-based sandboxes for safe code execution. Create isolated environments for running untrusted code, testing applications, and executing commands safely using Docker or Podman containers. No API keys or external services required - everything runs locally on your machine.
 
+## SECURITY POLICY
+
+**CRITICAL:** Never read, write, or access files in `~/.ssh` directory (or any `.ssh` directory). This directory contains sensitive SSH keys that must not be exposed to sandboxes. For git operations, use GitHub tokens via the `GITHUB_TOKEN` environment variable instead.
+
 ## Prerequisites
 - Docker or Podman installed and running
 - Python 3.12+
@@ -111,56 +115,80 @@ csbx sandbox export my-project --path /home/user/myapp
 **Important**: Sandboxes are ephemeral! Use export to save your work before the sandbox times out (default: 30 minutes).
 
 ### Clone Existing Repository
+
+**Authentication**: Use GitHub tokens for authentication. SSH is disabled for security reasons.
+
 ```bash
+# Set up GitHub token (one time)
+export GITHUB_TOKEN=ghp_your_token_here
+
 # Clone via HTTPS (using name or ID)
 csbx sandbox git-clone my-project https://github.com/username/repo.git
 
-# Clone via SSH
-csbx sandbox git-clone my-project git@github.com:username/repo.git
-
 # Clone specific branch
-csbx sandbox git-clone my-project git@github.com:username/repo.git --branch dev
+csbx sandbox git-clone my-project https://github.com/username/repo.git --branch dev
 
 # Clone to specific path
-csbx sandbox git-clone my-project git@github.com:username/repo.git --path /home/user/myapp
+csbx sandbox git-clone my-project https://github.com/username/repo.git --path /home/user/myapp
+
+# Clone with explicit token (if not using env var)
+csbx sandbox git-clone my-project https://github.com/username/repo.git --github-token $GITHUB_TOKEN
 ```
 
 ### Push to Git Repository
 
 **Auto-Detection**: When you provide a GitHub/GitLab/Bitbucket URL, the command automatically clones the existing repo first, then adds your changes and pushes back. This is the most common workflow!
 
+**Authentication**: Use GitHub tokens for authentication. SSH is disabled for security reasons.
+
 ```bash
+# Set up GitHub token (one time)
+export GITHUB_TOKEN=ghp_your_token_here
+
 # Auto clone-first for GitHub repos (most common - using name or ID)
 csbx sandbox git-push my-project https://github.com/username/repo.git
 
 # Auto clone-first with custom branch
-csbx sandbox git-push my-project git@github.com:username/repo.git --branch dev
+csbx sandbox git-push my-project https://github.com/username/repo.git --branch dev
 
 # Auto clone-first with custom message
-csbx sandbox git-push my-project git@github.com:username/repo.git -m "Add new feature"
+csbx sandbox git-push my-project https://github.com/username/repo.git -m "Add new feature"
 
 # Create NEW/empty repository (skip cloning)
 csbx sandbox git-push my-project https://github.com/username/new-repo.git --no-clone
 
 # Force push (use with caution)
-csbx sandbox git-push my-project git@github.com:username/repo.git --force
+csbx sandbox git-push my-project https://github.com/username/repo.git --force
+
+# Use explicit token (if not using env var)
+csbx sandbox git-push my-project https://github.com/username/repo.git --github-token $GITHUB_TOKEN
 ```
 
-**SSH Authentication**: For security, git commands use a dedicated AI SSH key from `~/.claude/claude_ai_rsa` by default. You can specify a different key with `--ssh-key /path/to/key`.
+**Setting up GitHub Token**:
 
-**Setting up the AI SSH Key**:
+**Quick method with `gh` CLI (recommended):**
 ```bash
-# 1. Create the directory
-mkdir -p ~/.claude
+# If you have gh CLI installed and authenticated
+export GITHUB_TOKEN=$(gh auth token)
 
-# 2. Generate the AI-specific SSH key
-ssh-keygen -t rsa -b 4096 -f ~/.claude/claude_ai_rsa -C "claude-ai@local"
-
-# 3. Add the public key to your GitHub/GitLab account
-cat ~/.claude/claude_ai_rsa.pub
-# Copy the output and add it to your GitHub SSH keys at:
-# https://github.com/settings/keys
+# Verify it's set
+echo $GITHUB_TOKEN
 ```
+
+**Manual method:**
+```bash
+# 1. Create a token at: https://github.com/settings/tokens/new
+#    - Select "repo" scope for private repos, or "public_repo" for public repos only
+#    - Set an appropriate expiration date
+
+# 2. Set the token as environment variable
+export GITHUB_TOKEN=ghp_your_token_here
+
+# 3. (Optional) Add to your shell profile for persistence
+echo 'export GITHUB_TOKEN=ghp_your_token_here' >> ~/.bashrc
+```
+
+**Note:** If you try to push/clone without a token, you'll get helpful instructions with the exact commands to run.
 
 ## Troubleshooting
 
