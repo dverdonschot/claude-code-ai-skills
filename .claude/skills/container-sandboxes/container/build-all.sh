@@ -34,19 +34,23 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Build base image first
-echo -e "\n[1/4] Building base image..."
+echo -e "\n[1/5] Building base image..."
 $RUNTIME build -t container-sandbox:base ./base/
 
 # Build Python image
-echo -e "\n[2/4] Building Python image (with uv)..."
+echo -e "\n[2/5] Building Python image (with uv)..."
 $RUNTIME build -t container-sandbox:python ./python/
 
 # Build Node image
-echo -e "\n[3/4] Building Node.js image..."
+echo -e "\n[3/5] Building Node.js image..."
 $RUNTIME build -t container-sandbox:node ./node/
 
+# Build Deno image
+echo -e "\n[4/5] Building Deno image..."
+$RUNTIME build -t container-sandbox:deno ./deno/
+
 # Build full-stack image
-echo -e "\n[4/4] Building full-stack image (Python + Node + uv)..."
+echo -e "\n[5/5] Building full-stack image (Python + Node + uv)..."
 $RUNTIME build -t container-sandbox:full-stack ./full-stack/
 
 echo -e "\n========================================="
@@ -61,6 +65,7 @@ echo -e "\nUsage:"
 echo "  $RUNTIME run -it --rm container-sandbox:base bash"
 echo "  $RUNTIME run -it --rm container-sandbox:python python"
 echo "  $RUNTIME run -it --rm container-sandbox:node node"
+echo "  $RUNTIME run -it --rm container-sandbox:deno deno"
 echo "  $RUNTIME run -it --rm container-sandbox:full-stack bash"
 echo -e "\nTo use a specific runtime, set CONTAINER_RUNTIME:"
 echo "  CONTAINER_RUNTIME=docker ./build-all.sh"

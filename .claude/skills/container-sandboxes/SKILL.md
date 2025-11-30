@@ -46,10 +46,11 @@ Local container-based sandboxes for safe code execution. Create isolated environ
 
 ## Core Concepts
 - **Sandboxes**: Isolated containers (Docker or Podman) for safe code execution.
-- **Templates**: Container images (Base, Python, Node, Full-stack).
+- **Templates**: Container images (Base, Python, Node, Deno, Full-stack).
 - **Local Execution**: All code runs locally on your machine.
 - **Runtime Flexibility**: Supports both Docker and Podman with auto-detection.
 - **Naming**: Each sandbox gets a friendly name (e.g., `csbx-my-project`) and an ID (e.g., `abc123def456`). You can use either in commands!
+- **Volume Mounting**: Mount local directories into containers for live file editing with your IDE (VSCode, Zed, etc.)
 
 ## Output Visibility Rules
 
@@ -68,7 +69,12 @@ Always summarize operations in response text after running commands.
 
 ### Lifecycle
 - `csbx init` - Create a new sandbox (interactive or with flags)
-- `csbx sandbox create` - Create a sandbox
+  - `--template, -t` - Container image to use
+  - `--name, -n` - Container name
+  - `--mount, -m` - Volume mounts (host:container or host:container:mode)
+  - `--port, -p` - Port mappings (container:host)
+  - `--env, -e` - Environment variables (KEY=VALUE)
+- `csbx sandbox create` - Create a sandbox (same options as init)
 - `csbx sandbox list` - List running sandboxes
 - `csbx sandbox kill <id>` - Stop and remove a sandbox
 - `csbx sandbox info <id>` - Get details about a sandbox
@@ -112,10 +118,79 @@ csbx exec $ID "python -c 'print(\"Hello from containers!\")'" --echo
 csbx sandbox kill my-project
 ```
 
+### Run Deno Code
+```bash
+# Create sandbox with Deno
+csbx init --template container-sandbox:deno --name deno-project
+
+# Run deno with visible output
+csbx exec deno-project "deno run --allow-net https://deno.land/std/examples/welcome.ts" --echo
+
+# Write and run a Deno script
+csbx files write deno-project /home/user/app.ts "console.log('Hello from Deno!');" --echo
+csbx exec deno-project "deno run /home/user/app.ts" --echo
+
+# Cleanup
+csbx sandbox kill deno-project
+```
+
 ### Using Podman explicitly
 ```bash
 CONTAINER_RUNTIME=podman csbx init --template container-sandbox:python
 ```
+
+### Volume Mounting for Live File Editing
+
+**NEW FEATURE!** Mount local directories into containers to edit files with your IDE while the container runs them.
+
+**Benefits:**
+- Edit code in VSCode/Zed on your host machine
+- Changes are immediately visible in the container
+- No need to export/import files
+- Perfect for development workflows
+
+**Examples:**
+```bash
+# Mount a single directory (read-write by default)
+csbx init --template container-sandbox:deno \
+  --mount ~/my-deno-project:/home/user/app \
+  --name deno-dev
+
+# Now edit files in ~/my-deno-project with your IDE
+code ~/my-deno-project  # VSCode
+# or
+zed ~/my-deno-project   # Zed
+
+# Run code in the container - it uses your local files!
+csbx exec deno-dev "deno run /home/user/app/main.ts" --echo
+
+# Multiple mounts
+csbx init --template container-sandbox:python \
+  --mount ~/code:/home/user/code \
+  --mount ~/data:/home/user/data:ro \
+  --name python-dev
+
+# Read-only mount (protect source files)
+csbx init --template container-sandbox:node \
+  --mount ~/config:/home/user/config:ro \
+  --mount ~/workspace:/home/user/workspace \
+  --name node-dev
+```
+
+**Mount Format:**
+- `host_path:container_path` - Read-write mount (default: includes SELinux relabeling on supported systems)
+- `host_path:container_path:ro` - Read-only mount
+- `host_path:container_path:rw` - Explicit read-write mount
+- `host_path:container_path:ro,Z` - Read-only with SELinux relabeling (for Fedora/RHEL)
+- `host_path:container_path:rw,z` - Read-write with shared SELinux label
+
+**Tips:**
+- Use absolute paths or `~` for home directory
+- The host path must exist before creating the sandbox
+- Changes in your IDE are instantly visible in the container
+- Great for web development, testing, and iterative coding
+- On SELinux systems (Fedora, RHEL), volumes are automatically relabeled with `:Z` flag
+- If you get permission errors, the mount includes SELinux relabeling by default
 
 ### Export Sandbox Files
 ```bash

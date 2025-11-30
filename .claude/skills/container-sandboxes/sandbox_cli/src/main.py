@@ -68,7 +68,8 @@ cli.add_command(browser)
 @click.option("--env", "-e", multiple=True, help="Environment variables (KEY=VALUE)")
 @click.option("--name", "-n", default=None, help="Container name (e.g., my-project)")
 @click.option("--port", "-p", multiple=True, help="Port mappings (container:host)")
-def init(template, timeout, env, name, port):
+@click.option("--mount", "-m", multiple=True, help="Volume mounts (host_path:container_path or host_path:container_path:mode)")
+def init(template, timeout, env, name, port, mount):
     """
     Initialize a new sandbox and display the ID.
 
@@ -95,6 +96,12 @@ def init(template, timeout, env, name, port):
 
         # Create with port mapping
         csbx init --template docker-sandbox:python --port 5173:5173 --name notes-app
+
+        # Create with volume mount (live file editing!)
+        csbx init --template docker-sandbox:deno --mount ~/my-project:/home/user/app --name deno-dev
+
+        # Multiple volume mounts with read-only mode
+        csbx init --template docker-sandbox:python --mount ~/code:/home/user/code --mount ~/data:/home/user/data:ro
     """
     try:
         from .modules import sandbox as sbx_module
@@ -116,12 +123,25 @@ def init(template, timeout, env, name, port):
                 container_port, host_port = p.split(":", 1)
                 ports[int(container_port)] = int(host_port)
 
+        # Parse volume mounts
+        import os
+        volumes = {}
+        for m in mount:
+            parts = m.split(":")
+            if len(parts) >= 2:
+                host_path = os.path.abspath(os.path.expanduser(parts[0]))
+                container_path = parts[1]
+                # Support mode with optional SELinux flags: ro, rw, z, Z, ro,z, rw,Z, etc.
+                mode = parts[2] if len(parts) > 2 else "rw,Z"  # Default to rw with SELinux relabeling
+                volumes[host_path] = {"bind": container_path, "mode": mode}
+
         sbx = sbx_module.create_sandbox(
             template=template,
             timeout=timeout,
             envs=envs if envs else None,
             ports=ports if ports else None,
             name=name,
+            volumes=volumes if volumes else None,
         )
 
         console.print(f"\n[green]✓ Sandbox created successfully![/green]")
@@ -136,6 +156,12 @@ def init(template, timeout, env, name, port):
             console.print(f"\n[cyan]Port mappings:[/cyan]")
             for container_port, host_port in ports.items():
                 console.print(f"  {container_port} → {host_port}")
+
+        if volumes:
+            console.print(f"\n[cyan]Volume mounts:[/cyan]")
+            for host_path, mount_info in volumes.items():
+                mode_str = f" ({mount_info['mode']})" if mount_info.get('mode') != 'rw' else ''
+                console.print(f"  {host_path} → {mount_info['bind']}{mode_str}")
 
         console.print(f"\n[dim]Timeout: {timeout} seconds (~{timeout // 60} minutes)[/dim]")
 

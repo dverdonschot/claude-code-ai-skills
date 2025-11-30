@@ -27,7 +27,8 @@ def sandbox():
 @click.option("--env", "-e", multiple=True, help="Environment variables (KEY=VALUE)")
 @click.option("--name", "-n", default=None, help="Sandbox name")
 @click.option("--port", "-p", multiple=True, help="Port mappings (container:host)")
-def create(template, timeout, env, name, port):
+@click.option("--mount", "-m", multiple=True, help="Volume mounts (host_path:container_path or host_path:container_path:mode)")
+def create(template, timeout, env, name, port, mount):
     """
     Create a new sandbox.
 
@@ -40,6 +41,9 @@ def create(template, timeout, env, name, port):
 
         # Create with port mapping
         csbx sandbox create --template docker-sandbox:python --port 5173:5173
+
+        # Create with volume mount for live file editing
+        csbx sandbox create --template docker-sandbox:deno --mount ~/my-app:/home/user/app
     """
     try:
         console.print("[yellow]Creating sandbox...[/yellow]")
@@ -58,6 +62,18 @@ def create(template, timeout, env, name, port):
                 container_port, host_port = p.split(":", 1)
                 ports[int(container_port)] = int(host_port)
 
+        # Parse volume mounts
+        import os
+        volumes = {}
+        for m in mount:
+            parts = m.split(":")
+            if len(parts) >= 2:
+                host_path = os.path.abspath(os.path.expanduser(parts[0]))
+                container_path = parts[1]
+                # Support mode with optional SELinux flags: ro, rw, z, Z, ro,z, rw,Z, etc.
+                mode = parts[2] if len(parts) > 2 else "rw,Z"  # Default to rw with SELinux relabeling
+                volumes[host_path] = {"bind": container_path, "mode": mode}
+
         # Add name to metadata
         metadata = {}
         if name:
@@ -69,6 +85,7 @@ def create(template, timeout, env, name, port):
             envs=envs if envs else None,
             metadata=metadata if metadata else None,
             ports=ports if ports else None,
+            volumes=volumes if volumes else None,
         )
 
         console.print(f"\n[green]✓ Sandbox created![/green]")

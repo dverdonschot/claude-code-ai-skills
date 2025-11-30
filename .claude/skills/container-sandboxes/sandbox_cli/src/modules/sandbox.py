@@ -69,6 +69,7 @@ class DockerSandbox:
         auto_pause: bool = False,
         ports: Optional[Dict[int, int]] = None,
         name: Optional[str] = None,
+        volumes: Optional[Dict[str, Dict[str, str]]] = None,
     ) -> "DockerSandbox":
         """
         Create a new sandbox (Docker container).
@@ -81,6 +82,7 @@ class DockerSandbox:
             auto_pause: Enable auto-pause (not implemented)
             ports: Port mappings {container_port: host_port}
             name: Custom container name (default: auto-generated)
+            volumes: Volume mounts {host_path: {'bind': container_path, 'mode': 'rw'}}
 
         Returns:
             DockerSandbox instance
@@ -133,6 +135,7 @@ class DockerSandbox:
             labels=labels,
             remove=False,
             ports=port_bindings if port_bindings else None,
+            volumes=volumes,
             command="sleep infinity",
         )
 
@@ -315,6 +318,7 @@ def create_sandbox(
     auto_pause: bool = False,
     ports: Optional[Dict[int, int]] = None,
     name: Optional[str] = None,
+    volumes: Optional[Dict[str, Dict[str, str]]] = None,
 ) -> DockerSandbox:
     """
     Create a new sandbox.
@@ -329,6 +333,7 @@ def create_sandbox(
         auto_pause=auto_pause,
         ports=ports,
         name=name,
+        volumes=volumes,
     )
 
 
